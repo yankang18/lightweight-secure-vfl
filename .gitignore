@@ -1,0 +1,16 @@
+LibriSpeech/
+datasets/
+.idea
+.ipynb_checkpoints/
+.DS_Store
+__pycache__/
+*.tar.gz
+*.pyc
+*.json
+*.csv
+chinese_data_features
+train_100_corpus
+data/
+result/
+lightweight_federated_learning/__pycache__
+*.zip
