@@ -6,7 +6,7 @@ import tempfile
 import numpy as np
 import torch
 import torch.nn as nn
-
+import time
 from utils import get_logger
 
 LOGGER = get_logger()
@@ -273,27 +273,39 @@ class EncryptedHostDenseModel(BaseDenseModel):
 
     def get_input_gradient(self, delta, acc_noise=None):
         # LOGGER.debug("EncryptedHostDenseModel.get_input_gradient")
+        # print("delta:", delta.shape)
+        # print("acc_noise:", acc_noise.shape)
+        # start_time = time.time()
         if acc_noise is not None:
             error = np.matmul(delta, (self.model_weight + acc_noise).T)
         else:
             error = np.matmul(delta, self.model_weight.T)
+        # end_time = time.time()
+        # print(f"spend time : {end_time - start_time}")
         return error
 
     def get_weight_gradient(self, delta):
         # LOGGER.debug("EncryptedHostDenseModel.get_weight_gradient")
         # print("self.input:", self.input, self.input.shape)
-        # print("delta:", delta, delta.shape)
+        # print("delta:", delta.shape)
+        # print("input:", self.input.shape)
+        # start_time = time.time()
         delta_w = np.matmul(delta.T, self.input)
+        # end_time = time.time()
+        # print(f"spend time : {end_time - start_time}")
         return delta_w.T
 
     def update_weight(self, delta):
         # LOGGER.debug("EncryptedHostDenseModel.update_weight")
         # LOGGER.debug(f"weight [before update]:{self.model_weight}, {self.model_weight.shape}")
-        # LOGGER.debug(f"delta:{delta},{delta.shape}")
+        # LOGGER.debug(f"delta:{delta.shape}")
         # LOGGER.debug(f"lr:{self.lr}")
 
+        # start_time = time.time()
         # self.model_weight -= self.lr * delta.T
         self.model_weight -= self.learning_rate * delta
+        # end_time = time.time()
+        # print(f"spend time : {end_time - start_time}")
 
         # LOGGER.debug(f"weight [after update]:{self.model_weight}")
 
