@@ -65,7 +65,7 @@ class GuestInteractiveLayer(object):
         guest_input_gradient = self.__update_guest(backward_gradient)
         return guest_input_gradient
 
-    def compute_host_weight_gradient_w_noise(self, backward_gradient):
+    def compute_host_encrypted_weight_gradient_w_noise(self, backward_gradient):
         # LOGGER.trace("GUEST_BACKWARD.compute_host_weight_gradient_w_noise")
 
         host_encrypted_weight_gradient_w_noise_dict = dict()
@@ -166,15 +166,10 @@ class HostInteractiveLayer(object):
             weight_grad_noise = self.rng_generator.generate_random_number(host_weight_grad_w_noise.shape)
             host_weight_gradient_w_noise_dict[host_id] = host_weight_grad_w_noise + weight_grad_noise / self.learning_rate
 
-            # print("encrypt_helper_dict:", self.encrypt_helper_dict)
-            # print("acc_noise_dict:", self.acc_noise_dict)
             enc_acc_noise_dict[host_id] = self.encrypt_helper_dict[host_id].encrypt(self.acc_noise_dict[host_id])
 
             # accumulate noise
-            # print("self.acc_noise_dict[host_id]:", self.acc_noise_dict[host_id], self.acc_noise_dict[host_id].shape)
-            # print("weight_grad_noise:", weight_grad_noise, weight_grad_noise.shape)
             self.acc_noise_dict[host_id] = self.acc_noise_dict[host_id] + weight_grad_noise
-            # print("self.acc_noise_dict[host_id]:", self.acc_noise_dict[host_id], self.acc_noise_dict[host_id].shape)
 
         return host_weight_gradient_w_noise_dict, enc_acc_noise_dict
 
