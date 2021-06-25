@@ -105,7 +105,7 @@ def run_experiment(train_data, test_data, batch_size, epoch):
 if __name__ == '__main__':
     print("################################ Prepare Data ############################")
     # TODO: change the data directory to [your data directory]
-    data_dir = "../../../../../Data/"
+    data_dir = "../../../../Data/"
 
     class_lbls = ['person', 'animal']
     train, test = load_two_party_data(data_dir, class_lbls, neg_label=0)
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     Xa_test, Xb_test, y_test = test
 
     batch_size = 128
-    epoch = 3
+    epoch = 4
 
     Xa_train, Xb_train, y_train = shuffle(Xa_train, Xb_train, y_train)
     Xa_test, Xb_test, y_test = shuffle(Xa_test, Xb_test, y_test)
