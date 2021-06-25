@@ -1,8 +1,9 @@
+import time
+
 from utils import get_logger
 
 LOGGER = get_logger()
 
-import time
 
 class VerticalNeuralNetworkFederatedLearning(object):
 
@@ -48,17 +49,24 @@ class VerticalNeuralNetworkFederatedLearning(object):
         guest_logit = self.guest_intr_layer.compute_guest_logit(guest_repr)
         # print("[TRACE] guest_logit", guest_logit, guest_logit.shape)
 
+        start_time = time.time()
         enc_host_repr_dict = self.host_intr_layer.encrypt_host_repr(host_repr_dict)
+        end_time = time.time()
+        if self.is_trace: LOGGER.trace(f"---------- VNN_FORWARD_COMPUTATION - host - local encrypt time : "
+                                       f"{end_time - start_time} ----------")
+
         # all host interact with guest and obtain all host_logit in plain text
+        start_time = time.time()
         host_enc_obfuscated_logit_dict = self.guest_intr_layer.compute_encrypted_obfuscated_host_logit(
             enc_host_repr_dict)
         host_logit_w_noise_dict = self.host_intr_layer.compute_host_logit_w_noise(host_enc_obfuscated_logit_dict)
         host_logit_dict = self.guest_intr_layer.compute_host_logit(host_logit_w_noise_dict)
+        z_logit = self.guest_intr_layer.compute_comb_logit(host_logit_dict, guest_logit)
+        end_time = time.time()
+        if self.is_trace: LOGGER.trace(f"---------- VNN_FORWARD_COMPUTATION - interactively compute z_logit time : "
+                                       f"{end_time - start_time} ----------")
 
-        # print("VNN_FORWARD_COMPUTATION guest_logit:", guest_logit)
-        # print("VNN_FORWARD_COMPUTATION host_logit_dict:", host_logit_dict)
-        # guest compute activation of combination of host_logits and guest logit (output of interactive layer)
-        return self.guest_intr_layer.compute_comb_logit(host_logit_dict, guest_logit)
+        return z_logit
 
     def backward_computation(self, activation_grad):
         if self.is_trace: LOGGER.trace("---------- VNN_BACKWARD_COMPUTATION ----------")
@@ -67,14 +75,37 @@ class VerticalNeuralNetworkFederatedLearning(object):
         guest_repr_grad = self.guest_intr_layer.update_guest_dense_model(activation_grad)
 
         # all host interact with guest and obtain all host_logit in plain text
-        host_enc_weight_grad_w_noise_dict = self.guest_intr_layer.compute_host_weight_gradient_w_noise(activation_grad)
+        start_time = time.time()
+        host_enc_weight_grad_w_noise_dict = self.guest_intr_layer.compute_host_encrypted_weight_gradient_w_noise(
+            activation_grad)
+        end_time = time.time()
+        if self.is_trace: LOGGER.trace(
+            f"---------- VNN_BACKWARD_COMPUTATION - guest - compute_host_encrypted_weight_gradient_w_noise : "
+            f"{end_time - start_time} ----------")
+
+        start_time = time.time()
         result = self.host_intr_layer.compute_host_obfuscated_weight_gradient_w_noise(host_enc_weight_grad_w_noise_dict)
         host_weight_grad_w_noise_dict, enc_acc_noise_dict = result
+        end_time = time.time()
+        if self.is_trace: LOGGER.trace(
+            f"---------- VNN_BACKWARD_COMPUTATION - host - compute_host_obfuscated_weight_gradient_w_noise : "
+            f"{end_time - start_time} ----------")
+
+        start_time = time.time()
         host_enc_repr_grad_dict = self.guest_intr_layer.update_host_dense_model(activation_grad,
                                                                                 host_weight_grad_w_noise_dict,
                                                                                 enc_acc_noise_dict)
+        end_time = time.time()
+        if self.is_trace: LOGGER.trace(
+            f"---------- VNN_BACKWARD_COMPUTATION - guest - update_host_dense_model : "
+            f"{end_time - start_time} ----------")
 
+        start_time = time.time()
         host_repr_grad_dict = self.host_intr_layer.decrypt_host_repr_gradient(host_enc_repr_grad_dict)
+        end_time = time.time()
+        if self.is_trace: LOGGER.trace(
+            f"---------- VNN_BACKWARD_COMPUTATION - host - decrypt_host_repr_gradient : "
+            f"{end_time - start_time} ----------")
 
         return guest_repr_grad, host_repr_grad_dict
 
