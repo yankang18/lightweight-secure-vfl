@@ -12,7 +12,7 @@ class GuestTopModelLearner(object):
                  top_model,
                  classifier_criterion,
                  optim_dict,
-                 logit_activation_fn=nn.Sigmoid()):
+                 logit_activation_fn=nn.Softmax()):
         self.top_model = top_model
         self.classifier_criterion = classifier_criterion
         self.logit_activation_fn = logit_activation_fn
@@ -32,12 +32,12 @@ class GuestTopModelLearner(object):
 
     def train_top(self, z_logit, y):
         z_logit_tensor = torch.tensor(z_logit, requires_grad=True, dtype=torch.float)
-        y_tensor = torch.tensor(y)
-
+        # y_tensor = torch.tensor(y)
+        y_tensor = y
         activation = self.logit_activation_fn(z_logit_tensor) if self.logit_activation_fn else z_logit_tensor
         prediction = self.forward(activation)
 
-        label_tensor = y_tensor.reshape(-1, 1).type_as(prediction)
+        label_tensor = y_tensor.squeeze(1)
         loss = self.classifier_criterion(prediction, label_tensor)
 
         loss.backward()
@@ -54,7 +54,7 @@ class GuestTopModel(nn.Module):
             # nn.Linear(in_features=input_dim, out_features=30),
             # nn.BatchNorm1d(30),
             # nn.LeakyReLU(),
-            nn.Linear(in_features=input_dim, out_features=1)
+            nn.Linear(in_features=input_dim, out_features=40)
         )
 
     def forward(self, x):

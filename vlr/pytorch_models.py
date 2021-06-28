@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
+from torchvision import models
 
 class DenseModel(nn.Module):
     def __init__(self, input_dim, output_dim, learning_rate=0.01, bias=True):
@@ -36,10 +36,12 @@ class DenseModel(nn.Module):
 class LocalModel(nn.Module):
     def __init__(self, input_dim, output_dim, optimizer_dict):
         super(LocalModel, self).__init__()
-        self.extractor = nn.Sequential(
-            nn.Linear(in_features=input_dim, out_features=output_dim),
-            nn.LeakyReLU()
-        )
+        # self.extractor = nn.Sequential(
+        #     nn.Linear(in_features=input_dim, out_features=output_dim),
+        #     nn.LeakyReLU()
+        # )
+        self.extractor = models.resnet18(pretrained=True)
+        self.extractor.fc = nn.Linear(512, output_dim)
         self.output_dim = output_dim
         self.is_debug = False
 
@@ -51,7 +53,7 @@ class LocalModel(nn.Module):
     def forward(self, x):
         if self.is_debug: print("[DEBUG] DenseModel.forward")
 
-        x = torch.tensor(x).float()
+        # x = torch.tensor(x)
         return self.extractor(x).detach().numpy()
 
     def predict(self, x):
@@ -63,7 +65,7 @@ class LocalModel(nn.Module):
     def backward(self, x, grads):
         if self.is_debug: print("[DEBUG] DenseModel.backward")
 
-        x = torch.tensor(x).float()
+        # x = torch.tensor(x).float()
         grads = torch.tensor(grads).float()
         output = self.extractor(x)
         output.backward(gradient=grads)

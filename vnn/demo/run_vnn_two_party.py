@@ -1,7 +1,8 @@
 import torch.nn as nn
 from sklearn.utils import shuffle
-
-from datasets.nus_wide_dataset import load_two_party_data
+from torch.utils.data import DataLoader
+# from datasets.nus_wide_dataset import load_two_party_data
+from dataset import MultiViewDataset6Party
 from vlr.pytorch_models import LocalModel
 from vlr.vfl_fixture import FederatedLearningFixture
 from vnn.interacrive_dense_models import GuestDenseModel, EncryptedHostDenseModel
@@ -24,7 +25,7 @@ def get_top_mode_learner(top_model_input_dim, optim_dict):
 
     top_learner = GuestTopModelLearner(
         top_model=top_model,
-        classifier_criterion=nn.BCEWithLogitsLoss(),
+        classifier_criterion=nn.CrossEntropyLoss(),
         optim_dict=optim_dict,
         logit_activation_fn=None)
 
@@ -35,8 +36,8 @@ def run_experiment(train_data, test_data, batch_size, epoch):
     print("hyper-parameters:")
     print("batch size: {0}".format(batch_size))
 
-    Xa_train, Xb_train, y_train = train_data
-    Xa_test, Xb_test, y_test = test_data
+    # Xa_train, Xb_train, y_train = train_data
+    # Xa_test, Xb_test, y_test = test_data
 
     intr_layer_learning_rate = 0.001
     host_local_optimizer_dict = {'learning_rate': 0.001, 'momentum': 0.99, 'weight_decay': 0.0001}
@@ -48,18 +49,18 @@ def run_experiment(train_data, test_data, batch_size, epoch):
 
     print("################################ Wire Federated Models ############################")
 
-    guest_local_model_dim = 60
-    host_local_model_dim = 60
+    guest_local_model_dim = 256
+    host_local_model_dim = 256
 
-    dense_model_input_dim = 60
-    dense_model_out_dim = 30
+    dense_model_input_dim = 256
+    dense_model_out_dim = 128
 
-    top_model_input_dim = 30
+    top_model_input_dim = 128
 
     # create local models for guest and host parties.
-    guest_local_model = LocalModel(input_dim=Xa_train.shape[1], output_dim=guest_local_model_dim,
+    guest_local_model = LocalModel(input_dim=32, output_dim=guest_local_model_dim,
                                    optimizer_dict=guest_local_optimizer_dict)
-    host_local_model = LocalModel(input_dim=Xb_train.shape[1], output_dim=host_local_model_dim,
+    host_local_model = LocalModel(input_dim=32, output_dim=host_local_model_dim,
                                   optimizer_dict=host_local_optimizer_dict)
     party_host_id = 'A'
 
@@ -94,10 +95,10 @@ def run_experiment(train_data, test_data, batch_size, epoch):
     # only guest party has labels (i.e., Y), host parties only have features (e.g., X).
     # 'party_list' stores X for all other parties.
     # Since this is two-party VFL, 'party_list' only stores the X of host party.
-    train_data = {federated_learning.get_main_party_id(): {"X": Xa_train, "Y": y_train},
-                  "party_list": {party_host_id: Xb_train}}
-    test_data = {federated_learning.get_main_party_id(): {"X": Xa_test, "Y": y_test},
-                 "party_list": {party_host_id: Xb_test}}
+    train_data = {federated_learning.get_main_party_id(): {"X": train_data, "Y": train_data},
+                  "party_list": {party_host_id: train_data}}
+    test_data = {federated_learning.get_main_party_id(): {"X": test_data, "Y": test_data},
+                 "party_list": {party_host_id: test_data}}
 
     fl_fixture.fit(train_data=train_data, test_data=test_data, epochs=epoch, batch_size=batch_size)
 
@@ -105,18 +106,16 @@ def run_experiment(train_data, test_data, batch_size, epoch):
 if __name__ == '__main__':
     print("################################ Prepare Data ############################")
     # TODO: change the data directory to [your data directory]
-    data_dir = "../../../../Data/"
+    data_dir = "../../data/modelnet40v1png/"
+    train_dataset = MultiViewDataset6Party(data_dir, 'train', 32, 32, 6)
+    valid_dataset = MultiViewDataset6Party(data_dir, 'test', 32, 32, 6)
+    # class_lbls = ['person', 'animal']
+    # train, test = load_two_party_data(data_dir, class_lbls, neg_label=0)
+    # Xa_train, Xb_train, y_train = train
+    # Xa_test, Xb_test, y_test = test
 
-    class_lbls = ['person', 'animal']
-    train, test = load_two_party_data(data_dir, class_lbls, neg_label=0)
-    Xa_train, Xb_train, y_train = train
-    Xa_test, Xb_test, y_test = test
-
-    batch_size = 128
-    epoch = 4
-
-    Xa_train, Xb_train, y_train = shuffle(Xa_train, Xb_train, y_train)
-    Xa_test, Xb_test, y_test = shuffle(Xa_test, Xb_test, y_test)
-    train = [Xa_train, Xb_train, y_train]
-    test = [Xa_test, Xb_test, y_test]
-    run_experiment(train_data=train, test_data=test, batch_size=batch_size, epoch=epoch)
+    batch_size = 32
+    epoch = 50
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    valid_loader = DataLoader(valid_dataset, batch_size=batch_size)
+    run_experiment(train_data=train_loader, test_data=valid_loader, batch_size=batch_size, epoch=epoch)
