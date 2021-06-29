@@ -1,3 +1,4 @@
+import torch.cuda
 import torch.nn as nn
 from sklearn.utils import shuffle
 from torch.utils.data import DataLoader
@@ -46,7 +47,7 @@ def run_experiment(train_data, test_data, batch_size, epoch):
 
     close_encrypt = True
     is_trace = False
-
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print("################################ Wire Federated Models ############################")
 
     guest_local_model_dim = 256
@@ -59,9 +60,9 @@ def run_experiment(train_data, test_data, batch_size, epoch):
 
     # create local models for guest and host parties.
     guest_local_model = LocalModel(input_dim=32, output_dim=guest_local_model_dim,
-                                   optimizer_dict=guest_local_optimizer_dict)
+                                   optimizer_dict=guest_local_optimizer_dict, device=device)
     host_local_model = LocalModel(input_dim=32, output_dim=host_local_model_dim,
-                                  optimizer_dict=host_local_optimizer_dict)
+                                  optimizer_dict=host_local_optimizer_dict, device=device)
     party_host_id = 'A'
 
     # create dense models of interactive layer for both guest repr and host repr.
@@ -114,7 +115,7 @@ if __name__ == '__main__':
     # Xa_train, Xb_train, y_train = train
     # Xa_test, Xb_test, y_test = test
 
-    batch_size = 32
+    batch_size = 128
     epoch = 50
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size)

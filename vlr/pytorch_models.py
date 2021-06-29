@@ -34,16 +34,18 @@ class DenseModel(nn.Module):
 
 
 class LocalModel(nn.Module):
-    def __init__(self, input_dim, output_dim, optimizer_dict):
+    def __init__(self, input_dim, output_dim, optimizer_dict, device):
         super(LocalModel, self).__init__()
         # self.extractor = nn.Sequential(
         #     nn.Linear(in_features=input_dim, out_features=output_dim),
         #     nn.LeakyReLU()
         # )
-        self.extractor = models.resnet18(pretrained=True)
+        self.extractor = models.resnet18()
         self.extractor.fc = nn.Linear(512, output_dim)
         self.output_dim = output_dim
         self.is_debug = False
+        self.device = device
+        self.extractor = self.extractor.to(device)
 
         lr = optimizer_dict['learning_rate']
         momentum = optimizer_dict['momentum']
@@ -54,19 +56,24 @@ class LocalModel(nn.Module):
         if self.is_debug: print("[DEBUG] DenseModel.forward")
 
         # x = torch.tensor(x)
-        return self.extractor(x).detach().numpy()
+        x = x.to(self.device)
+        return self.extractor(x).cpu().detach().numpy()
 
     def predict(self, x):
         if self.is_debug: print("[DEBUG] DenseModel.predict")
 
-        x = torch.tensor(x).float()
-        return self.extractor(x).detach().numpy()
+        # x = torch.tensor(x).float()
+        x = x.to(self.device)
+        return self.extractor(x).cpu().detach().numpy()
 
     def backward(self, x, grads):
         if self.is_debug: print("[DEBUG] DenseModel.backward")
 
         # x = torch.tensor(x).float()
+        # grads = grads.to(self.device)
+        x = x.to(self.device)
         grads = torch.tensor(grads).float()
+        grads = grads.to(self.device)
         output = self.extractor(x)
         output.backward(gradient=grads)
 

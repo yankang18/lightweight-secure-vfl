@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import roc_auc_score, accuracy_score
 
@@ -6,22 +7,27 @@ from vlr.vfl import VerticalMultiplePartyLogisticRegressionFederatedLearning
 
 
 def compute_correct_prediction(*, y_targets, y_prob_preds, threshold=0.5):
-    y_hat_lbls = []
-    pred_pos_count = 0
-    pred_neg_count = 0
-    correct_count = 0
-    for y_prob, y_t in zip(y_prob_preds, y_targets):
-        if y_prob <= threshold:
-            pred_neg_count += 1
-            y_hat_lbl = 0
-        else:
-            pred_pos_count += 1
-            y_hat_lbl = 1
-        y_hat_lbls.append(y_hat_lbl)
-        if y_hat_lbl == y_t:
-            correct_count += 1
+    y_targets = y_targets.squeeze(1)
+    y_prob_preds = torch.tensor(y_prob_preds)
+    y_preds = torch.argmax(y_prob_preds, dim=1)
+    num_correct = torch.eq(y_preds, y_targets).sum().float().item()
+    counts = len(y_targets)
+    # y_hat_lbls = []
+    # pred_pos_count = 0
+    # pred_neg_count = 0
+    # correct_count = 0
+    # for y_prob, y_t in zip(y_prob_preds, y_targets):
+    #     if y_prob <= threshold:
+    #         pred_neg_count += 1
+    #         y_hat_lbl = 0
+    #     else:
+    #         pred_pos_count += 1
+    #         y_hat_lbl = 1
+    #     y_hat_lbls.append(y_hat_lbl)
+    #     if y_hat_lbl == y_t:
+    #         correct_count += 1
 
-    return np.array(y_hat_lbls), [pred_pos_count, pred_neg_count, correct_count]
+    return num_correct, counts
 
 
 class FederatedLearningFixture(object):
@@ -80,16 +86,35 @@ class FederatedLearningFixture(object):
                     avg_loss = np.mean(loss_list)
                     print("===> epoch: {0}, batch: {1}, loss: {2}"
                           .format(ep, i, avg_loss))
-                    # loss_list = list()
-                    # party_X_test_dict = dict()
-                    # for party_id, party_X in test_data["party_list"].items():
-                    #     party_X_test_dict[party_id] = party_X
-                    # y_prob_preds = self.federated_learning.predict(Xa_test, party_X_test_dict)
-                    # y_hat_lbls, statistics = compute_correct_prediction(y_targets=y_test,
-                    #                                                     y_prob_preds=y_prob_preds,
-                    #                                                     threshold=threshold)
-                    # acc = accuracy_score(y_test, y_hat_lbls)
-                    # auc = roc_auc_score(y_test, y_prob_preds)
-                    # print("===> epoch: {0}, batch: {1}, loss: {2}, acc: {3}, auc: {4}"
-                    #       .format(ep, batch_idx, ave_loss, acc, auc))
-                    # print("===>", precision_recall_fscore_support(y_test, y_hat_lbls, average="macro"))
+            total_corrects = 0
+            total_counts = 0
+            with torch.no_grad():
+                for i, (X, y) in enumerate(test_loader):
+                    party_X_test_dict = dict()
+                    for idx, party_id in enumerate(test_data["party_list"].items()):
+                        party_X_test_dict[party_id[0]] = X[1:][idx]
+                    y_prob_preds = self.federated_learning.predict(X[0], party_X_test_dict)
+                    num_correct, counts = compute_correct_prediction(y_targets=y, y_prob_preds=y_prob_preds,
+                                                                     threshold=threshold)
+                    total_corrects += num_correct
+                    total_counts += counts
+                acc = total_corrects / total_counts
+                print("===> epoch: {0}, acc: {1}".format(ep, acc))
+            # acc = accuracy_score(y_test, y_hat_lbls)
+            # auc = roc_auc_score(y_test, y_prob_preds)
+            # print("===> epoch: {0}, batch: {1}, loss: {2}, acc: {3}, auc: {4}"
+            #       .format(ep, batch_idx, ave_loss, acc, auc))
+            # print("===>", precision_recall_fscore_support(y_test, y_hat_lbls, average="macro"))
+            # loss_list = list()
+            # party_X_test_dict = dict()
+            # for party_id, party_X in test_data["party_list"].items():
+            #     party_X_test_dict[party_id] = party_X
+            # y_prob_preds = self.federated_learning.predict(Xa_test, party_X_test_dict)
+            # y_hat_lbls, statistics = compute_correct_prediction(y_targets=y_test,
+            #                                                     y_prob_preds=y_prob_preds,
+            #                                                     threshold=threshold)
+            # acc = accuracy_score(y_test, y_hat_lbls)
+            # auc = roc_auc_score(y_test, y_prob_preds)
+            # print("===> epoch: {0}, batch: {1}, loss: {2}, acc: {3}, auc: {4}"
+            #       .format(ep, batch_idx, ave_loss, acc, auc))
+            # print("===>", precision_recall_fscore_support(y_test, y_hat_lbls, average="macro"))
