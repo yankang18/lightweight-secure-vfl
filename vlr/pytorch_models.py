@@ -40,8 +40,8 @@ class LocalModel(nn.Module):
         #     nn.Linear(in_features=input_dim, out_features=output_dim),
         #     nn.LeakyReLU()
         # )
-        self.extractor = models.resnet18(pretrained=True)
-        self.extractor.fc = nn.Linear(512, output_dim)
+        self.extractor = models.resnet18(pretrained=False, num_classes=output_dim)
+        # self.extractor.fc = nn.Linear(512, output_dim)
         self.output_dim = output_dim
         self.is_debug = False
 
