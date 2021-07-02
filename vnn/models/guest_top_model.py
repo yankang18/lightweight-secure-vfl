@@ -12,7 +12,7 @@ class GuestTopModelLearner(object):
                  top_model,
                  classifier_criterion,
                  optim_dict,
-                 logit_activation_fn=nn.Softmax()):
+                 logit_activation_fn):
         self.top_model = top_model
         self.classifier_criterion = classifier_criterion
         self.logit_activation_fn = logit_activation_fn

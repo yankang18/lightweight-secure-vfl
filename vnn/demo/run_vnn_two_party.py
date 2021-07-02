@@ -44,7 +44,7 @@ def run_experiment(train_data, test_data, batch_size, epoch):
     guest_local_optimizer_dict = {'learning_rate': 0.001, 'momentum': 0.99, 'weight_decay': 0.0001}
     top_optim_dict = {'learning_rate': 0.001, 'momentum': 0.99, 'weight_decay': 0.0001}
 
-    close_encrypt = True
+    close_encrypt = False
     is_trace = False
 
     print("################################ Wire Federated Models ############################")

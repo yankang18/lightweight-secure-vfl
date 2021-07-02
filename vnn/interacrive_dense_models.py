@@ -86,12 +86,13 @@ class BaseDenseModel(object):
     def __init__(self, role):
         self.role = role
         self.model_weight = None
-        self.bias = None
+        self.bias = 0
         self.internal_dense_model = None
         self.is_empty_model = False
 
         # only guest apply bias
         self.apply_bias = True if self.role == 'guest' else False
+        # self.apply_bias = False
 
     def forward(self, x):
         pass
