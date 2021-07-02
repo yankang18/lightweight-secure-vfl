@@ -48,15 +48,16 @@ def run_experiment(train_data, test_data, batch_size, epoch):
     close_encrypt = True
     is_trace = False
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    # device = 'cpu'
     print("################################ Wire Federated Models ############################")
 
-    guest_local_model_dim = 256
-    host_local_model_dim = 256
+    guest_local_model_dim = 64
+    host_local_model_dim = 64
 
-    dense_model_input_dim = 256
-    dense_model_out_dim = 128
+    dense_model_input_dim = 64
+    dense_model_out_dim = 64
 
-    top_model_input_dim = 128
+    top_model_input_dim = 64
 
     # create local models for guest and host parties.
     guest_local_model = LocalModel(input_dim=32, output_dim=guest_local_model_dim,
@@ -115,7 +116,7 @@ if __name__ == '__main__':
     # Xa_train, Xb_train, y_train = train
     # Xa_test, Xb_test, y_test = test
 
-    batch_size = 128
+    batch_size = 32
     epoch = 50
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size)

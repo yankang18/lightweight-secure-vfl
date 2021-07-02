@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import roc_auc_score, accuracy_score
-
+from tqdm import tqdm
 from vlr.vfl import VerticalMultiplePartyLogisticRegressionFederatedLearning
 
 
@@ -65,7 +65,12 @@ class FederatedLearningFixture(object):
         running_time_list = []
         for ep in range(epochs):
             # for batch_idx in range(n_batches):
-            for i, (X, y) in enumerate(train_loader):
+            self.federated_learning.guest_local_model.train()
+            self.federated_learning.guest_intr_layer.guest_dense_model.internal_dense_model.train()
+            self.federated_learning.guest_intr_layer.host_dense_model_dict['A'].internal_dense_model.train()
+            self.federated_learning.guest_top_learner.top_model.train()
+            self.federated_learning.host_local_model_dict['A'].train()
+            for i, (X, y) in enumerate(tqdm(train_loader)):
                 global_step += 1
 
                 # prepare batch data for party A, which has both X and y.
@@ -88,8 +93,13 @@ class FederatedLearningFixture(object):
                           .format(ep, i, avg_loss))
             total_corrects = 0
             total_counts = 0
+            self.federated_learning.guest_local_model.eval()
+            self.federated_learning.guest_intr_layer.guest_dense_model.internal_dense_model.eval()
+            self.federated_learning.guest_intr_layer.host_dense_model_dict['A'].internal_dense_model.eval()
+            self.federated_learning.guest_top_learner.top_model.eval()
+            self.federated_learning.host_local_model_dict['A'].eval()
             with torch.no_grad():
-                for i, (X, y) in enumerate(test_loader):
+                for i, (X, y) in enumerate(tqdm(test_loader)):
                     party_X_test_dict = dict()
                     for idx, party_id in enumerate(test_data["party_list"].items()):
                         party_X_test_dict[party_id[0]] = X[1:][idx]
