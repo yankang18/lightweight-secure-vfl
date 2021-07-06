@@ -12,13 +12,14 @@ from vnn.models.guest_top_model import GuestTopModelLearner, GuestTopModel
 from vnn.vnn import VerticalNeuralNetworkFederatedLearning
 
 
-def get_dense_models(input_dim, output_dim, learning_rate):
+def get_dense_models(input_dim, output_dim, learning_rate, host_id_set):
     guest_dense_model = GuestDenseModel(learning_rate=learning_rate)
     guest_dense_model.build(input_dim=input_dim, output_dim=output_dim, restore_stage=False)
-
-    host_dense_model = EncryptedHostDenseModel(learning_rate=learning_rate)
-    host_dense_model.build(input_dim=input_dim, output_dim=output_dim, restore_stage=False)
-    return guest_dense_model, host_dense_model
+    host_dense_model_dict = {}
+    for host_id in host_id_set:
+        host_dense_model_dict[host_id] = EncryptedHostDenseModel(learning_rate=learning_rate)
+        host_dense_model_dict[host_id].build(input_dim=input_dim, output_dim=output_dim, restore_stage=False)
+    return guest_dense_model, host_dense_model_dict
 
 
 def get_top_mode_learner(top_model_input_dim, optim_dict):
@@ -58,19 +59,22 @@ def run_experiment(train_data, test_data, batch_size, epoch):
     dense_model_out_dim = 64
 
     top_model_input_dim = 64
-
+    party_host_id = ['A', 'B', 'C', 'D', 'E']
+    # party_host_id = ['A']
+    host_local_model_dict = {}
     # create local models for guest and host parties.
     guest_local_model = LocalModel(input_dim=32, output_dim=guest_local_model_dim,
                                    optimizer_dict=guest_local_optimizer_dict, device=device)
-    host_local_model = LocalModel(input_dim=32, output_dim=host_local_model_dim,
-                                  optimizer_dict=host_local_optimizer_dict, device=device)
-    party_host_id = 'A'
+    for id in set(party_host_id):
+        host_local_model_dict[id] = LocalModel(input_dim=32, output_dim=host_local_model_dim,
+                                               optimizer_dict=host_local_optimizer_dict, device=device)
 
     # create dense models of interactive layer for both guest repr and host repr.
-    guest_dense_model, host_dense_model = get_dense_models(dense_model_input_dim,
-                                                           dense_model_out_dim,
-                                                           intr_layer_learning_rate)
-    guest_intr_layer = GuestInteractiveLayer(host_dense_model_dict={"A": host_dense_model},
+    guest_dense_model, host_dense_model_dict = get_dense_models(dense_model_input_dim,
+                                                                dense_model_out_dim,
+                                                                intr_layer_learning_rate,
+                                                                set(party_host_id))
+    guest_intr_layer = GuestInteractiveLayer(host_dense_model_dict=host_dense_model_dict,
                                              guest_dense_model=guest_dense_model)
 
     host_intr_layer = HostInteractiveLayer(host_id_set=set(party_host_id),
@@ -85,7 +89,7 @@ def run_experiment(train_data, test_data, batch_size, epoch):
         guest_local_model=guest_local_model,
         guest_top_learner=top_learner,
         guest_interactive_layer=guest_intr_layer,
-        host_local_model_dict={party_host_id: host_local_model},
+        host_local_model_dict=host_local_model_dict,
         host_interactive_layer=host_intr_layer,
         main_party_id="_main")
     federated_learning.set_trace(is_trace=is_trace)
@@ -98,9 +102,9 @@ def run_experiment(train_data, test_data, batch_size, epoch):
     # 'party_list' stores X for all other parties.
     # Since this is two-party VFL, 'party_list' only stores the X of host party.
     train_data = {federated_learning.get_main_party_id(): {"X": train_data, "Y": train_data},
-                  "party_list": {party_host_id: train_data}}
+                  "party_list": set(party_host_id)}
     test_data = {federated_learning.get_main_party_id(): {"X": test_data, "Y": test_data},
-                 "party_list": {party_host_id: test_data}}
+                 "party_list":set(party_host_id)}
 
     fl_fixture.fit(train_data=train_data, test_data=test_data, epochs=epoch, batch_size=batch_size)
 

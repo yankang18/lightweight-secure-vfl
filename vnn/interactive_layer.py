@@ -108,7 +108,7 @@ class HostInteractiveLayer(object):
         self.encrypt_helper_dict = {host_id: PaillierEncryptHelper(close_encrypt=close_encrypt) for host_id in host_id_set}
         self.host_repr_dict = dict()
         self.acc_noise_dict = dict()
-        self.init_acc_noise = True
+        self.init_acc_noise = {host_id: True for host_id in host_id_set}
 
     def get_acc_noise_dict(self):
         return self.acc_noise_dict
@@ -124,8 +124,8 @@ class HostInteractiveLayer(object):
         return enc_host_repr_dict
 
     def __get_acc_noise(self, host_id, model_output_unit):
-        if self.init_acc_noise:
-            self.init_acc_noise = False
+        if self.init_acc_noise[host_id]:
+            self.init_acc_noise[host_id] = False
             # accumulative noise is initialized to zero
             host_repr_dim = self.host_repr_dict[host_id].shape[1]
             acc_noise = np.zeros((host_repr_dim, model_output_unit))
