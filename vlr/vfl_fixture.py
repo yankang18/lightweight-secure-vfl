@@ -32,9 +32,9 @@ def compute_correct_prediction(*, y_targets, y_prob_preds, threshold=0.5):
 
 class FederatedLearningFixture(object):
 
-    def __init__(self, federated_learning):
+    def __init__(self, federated_learning, logging):
         self.federated_learning = federated_learning
-
+        self.logging = logging
     def fit(self, train_data, test_data, epochs=50, batch_size=-1):
 
         # TODO: add early stopping
@@ -73,7 +73,7 @@ class FederatedLearningFixture(object):
             self.federated_learning.guest_top_learner.top_model.train()
             for k, _ in self.federated_learning.host_local_model_dict.items():
                 self.federated_learning.host_local_model_dict[k].train()
-            for i, (X, y) in enumerate(tqdm(train_loader)):
+            for i, (X, y) in enumerate(train_loader):
                 global_step += 1
 
                 # prepare batch data for party A, which has both X and y.
@@ -92,7 +92,7 @@ class FederatedLearningFixture(object):
                 if (global_step) % recording_period == 0:
                     recording_step += 1
                     avg_loss = np.mean(loss_list)
-                    print("===> epoch: {0}, batch: {1}, loss: {2}"
+                    self.logging.info("===> epoch: {0}, batch: {1}, loss: {2}"
                           .format(ep, i, avg_loss))
             total_corrects = 0
             total_counts = 0
@@ -104,7 +104,7 @@ class FederatedLearningFixture(object):
             for k, _ in self.federated_learning.host_local_model_dict.items():
                 self.federated_learning.host_local_model_dict[k].eval()
             with torch.no_grad():
-                for i, (X, y) in enumerate(tqdm(test_loader)):
+                for i, (X, y) in enumerate(test_loader):
                     party_X_test_dict = dict()
                     for idx, party_id in enumerate(test_data["party_list"]):
                         party_X_test_dict[party_id] = X[1:][idx]
@@ -116,7 +116,7 @@ class FederatedLearningFixture(object):
                 acc = total_corrects / total_counts
                 if acc > best_acc:
                     best_acc = acc
-                print("===> epoch: {0}, acc: {1}, best_acc: {2}".format(ep, acc, best_acc))
+                self.logging.info("===> epoch: {0}, acc: {1}, best_acc: {2}".format(ep, acc, best_acc))
             # acc = accuracy_score(y_test, y_hat_lbls)
             # auc = roc_auc_score(y_test, y_prob_preds)
             # print("===> epoch: {0}, batch: {1}, loss: {2}, acc: {3}, auc: {4}"

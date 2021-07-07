@@ -14,3 +14,5 @@ data/
 result/
 lightweight_federated_learning/__pycache__
 *.zip
+experiments/
+*.out
